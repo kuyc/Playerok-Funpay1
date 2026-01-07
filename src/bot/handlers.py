@@ -3,9 +3,16 @@ from services.stats import STATS, uptime
 
 def register_handlers(dp: Dispatcher):
 
-    @dp.message_handler(commands=["start"])
-    async def start(msg: types.Message):
-        await msg.answer("🤖 Арбитражный бот запущен")
+    from services.subscribers import add_user
+
+@dp.message_handler(commands=["start"])
+async def start(msg):
+    add_user(msg.from_user.id)
+    await msg.answer(
+        "🤖 Арбитражный бот запущен\n"
+        "🔔 Ты подписан на уведомления о сделках"
+    )
+
 
     @dp.message_handler(commands=["ping"])
     async def ping(msg: types.Message):
