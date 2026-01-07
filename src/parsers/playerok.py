@@ -1,68 +1,44 @@
-import asyncio
-import re
-from typing import List, Dict
+import asyncio, re
 from playwright.async_api import async_playwright
 
 BASE_URL = "https://playerok.com"
 
-
-async def scan_playerok(limit: int = 20) -> List[Dict]:
-    results = []
-
+async def scan_playerok(limit=20):
+    res = []
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=["--disable-blink-features=AutomationControlled"]
-        )
-
-        context = await browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            )
-        )
-
-        page = await context.new_page()
-        await page.goto(BASE_URL + "/category/cs2", timeout=60000)
-
-        for _ in range(3):
-            await page.mouse.wheel(0, 3000)
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(BASE_URL + "/category/cs2")
+        for _ in range(2):
+            await page.mouse.wheel(0, 2500)
             await asyncio.sleep(1)
 
         cards = await page.query_selector_all("a[href*='/product/']")
-
-        for card in cards[:limit]:
-            text = await card.inner_text()
-            url = await card.get_attribute("href")
-
+        for c in cards[:limit]:
+            text = await c.inner_text()
+            url = await c.get_attribute("href")
             price = extract_price(text)
             if price <= 0:
                 continue
-
-            results.append({
+            res.append({
                 "name": text.split("\n")[0][:100],
                 "price": price,
+                "url": BASE_URL + url,
                 "seller_rating": extract_rating(text),
                 "views": extract_views(text),
-                "url": BASE_URL + url
+                "source": "playerok"
             })
-
         await browser.close()
+    return res
 
-    return results
-
-
-def extract_price(text: str) -> int:
-    m = re.search(r"(\d{1,6})\s*₽", text)
+def extract_price(t): 
+    m = re.search(r"(\d+)\s*₽", t)
     return int(m.group(1)) if m else 0
 
-
-def extract_rating(text: str) -> float:
-    m = re.search(r"(\d\.\d)", text)
+def extract_rating(t):
+    m = re.search(r"(\d\.\d)", t)
     return float(m.group(1)) if m else 0.0
 
-
-def extract_views(text: str) -> int:
-    m = re.search(r"(\d+)\s*просмотр", text.lower())
+def extract_views(t):
+    m = re.search(r"(\d+)\s*просмотр", t.lower())
     return int(m.group(1)) if m else 0
