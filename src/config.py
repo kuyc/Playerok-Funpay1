@@ -1,20 +1,23 @@
-import os
-from dotenv import load_dotenv
+import logging
+from aiogram import Bot, Dispatcher, executor
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
-load_dotenv()
+from config import BOT_TOKEN
+from bot.handlers import register_handlers
+from bot.scanner import start_scanner
+from web import start_web
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+logging.basicConfig(level=logging.INFO)
 
-ADMIN_IDS = [
-    int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()
-]
+def main():
+    bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
+    dp = Dispatcher(bot, storage=MemoryStorage())
 
-SCAN_INTERVAL = 40
+    register_handlers(dp)
+    start_scanner(bot)
+    start_web()
 
-WHITELIST_KEYWORDS = [
-    "cs", "cs2", "prime",
-    "steam", "account", "аккаунт",
-    "key", "ключ",
-    "subscription", "подписка",
-    "spotify", "netflix", "nitro",
-]
+    executor.start_polling(dp, skip_updates=True)
+
+if __name__ == "__main__":
+    main()
