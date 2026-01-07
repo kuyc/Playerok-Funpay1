@@ -1,32 +1,31 @@
 import asyncio, re
 from playwright.async_api import async_playwright
 
-BASE_URL = "https://funpay.com"
+BASE = "https://funpay.com"
 
-async def scan_fanpay(limit=20):
+async def scan_fanpay(limit=15):
     res = []
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.goto(BASE_URL)
+        b = await p.chromium.launch(headless=True)
+        page = await b.new_page()
+        await page.goto(BASE)
         await asyncio.sleep(2)
 
         cards = await page.query_selector_all("a[href*='/lot/']")
         for c in cards[:limit]:
-            text = await c.inner_text()
+            t = await c.inner_text()
             url = await c.get_attribute("href")
-            price = extract_price(text)
-            if price <= 0:
-                continue
+            price = extract_price(t)
+            if price <= 0: continue
             res.append({
-                "name": text.split("\n")[0][:100],
+                "name": t.split("\n")[0][:100],
                 "price": price,
-                "url": BASE_URL + url,
+                "url": BASE + url,
                 "seller_rating": 0.0,
                 "views": 0,
                 "source": "fanpay"
             })
-        await browser.close()
+        await b.close()
     return res
 
 def extract_price(t):
